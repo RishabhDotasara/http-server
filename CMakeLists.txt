@@ -17,11 +17,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 # Add executable with all source files
 add_executable(server 
+    main.cpp
     src/server.cpp
     src/http.cpp
 )
 
-# Include directories (if you add headers later)
+# Include directories
 target_include_directories(server PRIVATE include)
 
 # Link pthread library

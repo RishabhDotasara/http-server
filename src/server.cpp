@@ -1,23 +1,17 @@
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <cstring>
-#include <thread>
-#include <vector>
-#include <mutex>
-#include <condition_variable>
-#include <fstream> 
 #include "http.hpp"
+#include "server.hpp"
 
-
-// ---- Server Code Below ----- 
 
 std::mutex mtx;
 std::condition_variable cv;
 HTTP http;
 
-void worker(std::vector<int> &conns){
+Server::Server(int NOT){
+    NOT = NOT;
+};
+Server::~Server(){};
+
+void Server::worker(std::vector<int> &conns){
 
     while (true){
         int connfd;
@@ -27,9 +21,9 @@ void worker(std::vector<int> &conns){
             cv.wait(lock, [&conns]
                     { return conns.size() > 0; });
 
-            std::cout << "Thread " << std::this_thread::get_id()
-                      << " handling request\n"
-                      << std::flush;
+            // std::cout << "Thread " << std::this_thread::get_id()
+            //           << " handling request\n"
+            //           << std::flush;
 
             connfd = conns.back();
             conns.pop_back();
@@ -40,12 +34,12 @@ void worker(std::vector<int> &conns){
         Request requestBuffer{};
 
         http.parseRequest(connfd, requestBuffer);
-        std::cout << "Method: " << requestBuffer.method << "\n"
-                  << "Path: " << requestBuffer.path << "\n"
-                  << "Version: " << requestBuffer.version << "\n"
-                  << "Body: " << requestBuffer.body << "\n"
-                  << std::flush;
-                  std::cout << "\n";
+        // std::cout << "Method: " << requestBuffer.method << "\n"
+        //           << "Path: " << requestBuffer.path << "\n"
+        //           << "Version: " << requestBuffer.version << "\n"
+        //           << "Body: " << requestBuffer.body << "\n"
+        //           << std::flush;
+        //           std::cout << "\n";
         http.sendFile(connfd, requestBuffer.path);
         close(connfd);
        
@@ -53,23 +47,23 @@ void worker(std::vector<int> &conns){
 
 }
 
-int main()
+void Server::start()
 {
 
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0)
     {
         perror("socket");
-        return 1;
+        exit(1);
     }
-    std::cout << "Socket Setup Complete!\n";
+    std::cout << "[INFO] Socket Setup Complete!\n";
 
     // to reuse the port 
     int opt = 1;
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
         perror("setsockopt");
-        return 1;
+        exit(1);
     }
 
     sockaddr_in sock_addr{};
@@ -80,9 +74,9 @@ int main()
     if (bind(server_socket, (sockaddr *)&sock_addr, sizeof(sock_addr)) < 0)
     {
         perror("bind");
-        return 1;
+        
     }
-    std::cout << "Port Bound to the Socket!\n";
+    std::cout << "[INFO] Port Bound to the Socket!\n";
 
     listen(server_socket, 5);
 
@@ -92,7 +86,7 @@ int main()
 
     // initialise the thread pool 
     
-    int N = 4; 
+    int N = NOT; 
     
     std::vector<int> conns;
     
@@ -101,7 +95,8 @@ int main()
         std::thread t(worker, std::ref(conns));
         t.detach();
     }
-    std::cout << "Accepting Connections from clients!\n";
+
+    std::cout << "[INFO] Accepting Connections from clients!\n";
     while (true)
     {
 
@@ -116,6 +111,4 @@ int main()
         conns.push_back(connfd);
         cv.notify_one();
     }
-
-    return 0;
 }
