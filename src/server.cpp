@@ -7,14 +7,15 @@
 #include <vector>
 #include <mutex>
 #include <condition_variable>
+#include <fstream> 
+#include "http.hpp"
 
-struct ThreadPool {
-    std::vector<std::thread> threads;
-    std::vector<int> conns; 
-};
+
+// ---- Server Code Below ----- 
 
 std::mutex mtx;
 std::condition_variable cv;
+HTTP http;
 
 void worker(std::vector<int> &conns){
 
@@ -34,19 +35,18 @@ void worker(std::vector<int> &conns){
             conns.pop_back();
         }
 
-        sleep(1);
-        
-        std::string body = "Hello World!\n";
-        std::string msg =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Length: " +
-        std::to_string(body.size()) + "\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n" +
-        body;
-        
-        send(connfd, msg.c_str(), msg.size(), 0);
-        
+
+        // request buffer 
+        Request requestBuffer{};
+
+        http.parseRequest(connfd, requestBuffer);
+        std::cout << "Method: " << requestBuffer.method << "\n"
+                  << "Path: " << requestBuffer.path << "\n"
+                  << "Version: " << requestBuffer.version << "\n"
+                  << "Body: " << requestBuffer.body << "\n"
+                  << std::flush;
+                  std::cout << "\n";
+        http.sendFile(connfd, requestBuffer.path);
         close(connfd);
        
     }
@@ -64,9 +64,17 @@ int main()
     }
     std::cout << "Socket Setup Complete!\n";
 
+    // to reuse the port 
+    int opt = 1;
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        perror("setsockopt");
+        return 1;
+    }
+
     sockaddr_in sock_addr{};
     sock_addr.sin_family = AF_INET;
-    sock_addr.sin_port = htons(8080);
+    sock_addr.sin_port = htons(8081);
     sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(server_socket, (sockaddr *)&sock_addr, sizeof(sock_addr)) < 0)
@@ -85,7 +93,7 @@ int main()
     // initialise the thread pool 
     
     int N = 4; 
-
+    
     std::vector<int> conns;
     
     // start the threads 
