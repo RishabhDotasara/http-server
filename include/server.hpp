@@ -11,14 +11,18 @@
 #include <condition_variable>
 #include <fstream>
 #include <functional>
+#include "request.hpp"
+#include "response.hpp"
 
 class Server{
     public:
         int NOT{4}; 
-        Server(int NOT); 
+        int PORT{3000};
+        std::unordered_map<std::string, std::function<void(Request&, Response&)>> pathMap;
+
+        Server(int NOT, int PORT); 
         ~Server(); 
 
-        void setup();
         void start();
-        static void worker(std::vector<int> &conns);
+        static void worker(std::vector<int> &conns, Server *server);
 };

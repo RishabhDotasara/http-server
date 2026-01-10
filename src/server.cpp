@@ -1,17 +1,47 @@
 #include "http.hpp"
 #include "server.hpp"
+#include "request.hpp"
+#include "response.hpp"
+#include <filesystem> 
 
 
 std::mutex mtx;
 std::condition_variable cv;
-HTTP http;
 
-Server::Server(int NOT){
-    NOT = NOT;
+Server::Server(int NOT, int PORT){
+    this->NOT = NOT;
+    this->PORT = PORT;
+
+    // for all the files in pucliv folder, already create the paths for all of them 
+    namespace fs = std::filesystem ;
+
+    for (const auto &entry : fs::directory_iterator("public"))
+    {
+        if (entry.is_regular_file())
+        {
+            std::string filename = entry.path().filename().string();
+            std::string route = "/" + filename;
+
+            // Special case for index.html -> "/"
+            if (filename == "index.html")
+            {
+                route = "/";
+            }
+
+            // Register route
+            pathMap[route] = [filename](Request &req, Response &res)
+            {
+                std::string filepath = "public/" + filename;
+                res.sendFile(filepath);
+            };
+
+            std::cout << "[INFO] Registered route: " << route << " -> " << filename << "\n";
+        }
+    }
 };
 Server::~Server(){};
 
-void Server::worker(std::vector<int> &conns){
+void Server::worker(std::vector<int> &conns, Server* server){
 
     while (true){
         int connfd;
@@ -31,16 +61,24 @@ void Server::worker(std::vector<int> &conns){
 
 
         // request buffer 
-        Request requestBuffer{};
+        Request request{connfd};
+        Response response{connfd};
 
-        http.parseRequest(connfd, requestBuffer);
-        // std::cout << "Method: " << requestBuffer.method << "\n"
-        //           << "Path: " << requestBuffer.path << "\n"
-        //           << "Version: " << requestBuffer.version << "\n"
-        //           << "Body: " << requestBuffer.body << "\n"
-        //           << std::flush;
-        //           std::cout << "\n";
-        http.sendFile(connfd, requestBuffer.path);
+        std::cout << "Method: " << request.data.method << "\n"
+                  << "Path: " << request.data.path << "\n"
+                  << "Version: " << request.data.version << "\n"
+                  << "Body: " << request.data.body << "\n"
+                  << std::flush;
+                  std::cout << "\n";
+
+        // call the particular mapped function in here 
+        auto it = server->pathMap.find(request.data.path); 
+        if (it != server->pathMap.end()){
+            it->second(request, response);
+        }
+        else {
+            response.sendHTML("<h1>Page Not Found!</h1>");
+        }
         close(connfd);
        
     }
@@ -76,7 +114,8 @@ void Server::start()
         perror("bind");
         
     }
-    std::cout << "[INFO] Port Bound to the Socket!\n";
+
+    std::cout << "[INFO] Listening at PORT " + std::to_string(PORT) << "\n";
 
     listen(server_socket, 5);
 
@@ -92,7 +131,7 @@ void Server::start()
     
     // start the threads 
     for (int i = 0; i < N; i++){
-        std::thread t(worker, std::ref(conns));
+        std::thread t(worker, std::ref(conns), this);
         t.detach();
     }
 

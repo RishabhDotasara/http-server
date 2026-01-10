@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects - Sinosuke's Portfolio</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">Sinosuke</div>
+            <ul class="nav-menu">
+                <li><a href="/">Home</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/projects.html" class="active">Projects</a></li>
+                <li><a href="/contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="page-header">
+            <h1>My Projects</h1>
+            <p class="subtitle">A collection of my work and experiments</p>
+        </section>
+
+        <section class="projects-grid">
+            <div class="project-card">
+                <div class="project-header">
+                    <h3>Multithreaded HTTP Server</h3>
+                    <span class="project-tag">C++</span>
+                </div>
+                <p>
+                    A custom HTTP/1.1 server built from scratch using C++. Features include 
+                    thread pooling with condition variables, mutex synchronization, and 
+                    efficient file streaming. Handles multiple concurrent connections with 
+                    route mapping capabilities.
+                </p>
+                <div class="project-tech">
+                    <span>C++17</span>
+                    <span>POSIX Sockets</span>
+                    <span>Multithreading</span>
+                    <span>CMake</span>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-header">
+                    <h3>Real-time Chat Application</h3>
+                    <span class="project-tag">Full Stack</span>
+                </div>
+                <p>
+                    A real-time messaging platform with WebSocket support for instant 
+                    communication. Features include user authentication, message persistence, 
+                    and room-based conversations.
+                </p>
+                <div class="project-tech">
+                    <span>Node.js</span>
+                    <span>WebSockets</span>
+                    <span>MongoDB</span>
+                    <span>React</span>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-header">
+                    <h3>Task Queue System</h3>
+                    <span class="project-tag">Systems</span>
+                </div>
+                <p>
+                    Distributed task processing system with priority queues and worker pools. 
+                    Implements producer-consumer pattern with load balancing across multiple 
+                    worker threads.
+                </p>
+                <div class="project-tech">
+                    <span>C++</span>
+                    <span>Redis</span>
+                    <span>Docker</span>
+                    <span>Message Queues</span>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-header">
+                    <h3>RESTful API Framework</h3>
+                    <span class="project-tag">Backend</span>
+                </div>
+                <p>
+                    Lightweight framework for building REST APIs with routing, middleware 
+                    support, and JSON parsing. Designed for simplicity and performance.
+                </p>
+                <div class="project-tech">
+                    <span>C++</span>
+                    <span>HTTP</span>
+                    <span>JSON</span>
+                    <span>Regex</span>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-header">
+                    <h3>Network Packet Analyzer</h3>
+                    <span class="project-tag">Networking</span>
+                </div>
+                <p>
+                    Tool for capturing and analyzing network packets. Implements protocol 
+                    parsing for TCP/IP, HTTP, and other common protocols with filtering 
+                    capabilities.
+                </p>
+                <div class="project-tech">
+                    <span>C++</span>
+                    <span>libpcap</span>
+                    <span>TCP/IP</span>
+                    <span>Raw Sockets</span>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-header">
+                    <h3>Memory Pool Allocator</h3>
+                    <span class="project-tag">Systems</span>
+                </div>
+                <p>
+                    Custom memory allocator using pool-based allocation strategy. Reduces 
+                    fragmentation and improves allocation speed for fixed-size objects.
+                </p>
+                <div class="project-tech">
+                    <span>C++</span>
+                    <span>Memory Management</span>
+                    <span>Performance</span>
+                    <span>Templates</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Sinosuke. Built with my custom C++ HTTP Server.</p>
+        </div>
+    </footer>
+</body>
+</html>

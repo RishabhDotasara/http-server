@@ -3,51 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to HTTP Server</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
-            background-color: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        h1 {
-            color: #333;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        p {
-            color: #666;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
-        .success {
-            color: #28a745;
-            font-weight: bold;
-        }
-        hr {
-            border: none;
-            border-top: 1px solid #ddd;
-            margin: 30px 0;
-        }
-    </style>
+    <title>Home - Sinosuke's Portfolio</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>It works!</h1>
-        <p class="success">HTTP Server is running successfully</p>
-        <p>If you can see this page, the server is working correctly.</p>
-        <hr>
-        <p>Add your content to the <code>public</code> directory to get started.</p>
-    </div>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">Sinosuke</div>
+            <ul class="nav-menu">
+                <li><a href="/" class="active">Home</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/projects.html">Projects</a></li>
+                <li><a href="/contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Welcome to My Portfolio</h1>
+            <p class="subtitle">Developer | Problem Solver | Technology Enthusiast</p>
+            <div class="hero-buttons">
+                <a href="/about.html" class="btn btn-primary">Learn More</a>
+                <a href="/projects.html" class="btn btn-secondary">View Projects</a>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-icon">💻</div>
+                <h3>Web Development</h3>
+                <p>Building modern, responsive web applications with cutting-edge technologies.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>System Programming</h3>
+                <p>Creating efficient, low-level systems and network applications in C++.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>Open Source</h3>
+                <p>Contributing to and maintaining open-source projects that matter.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Sinosuke. Built with my custom C++ HTTP Server.</p>
+        </div>
+    </footer>
 </body>
 </html>

@@ -4,54 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .container {
-            text-align: center;
-            background: white;
-            padding: 50px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-        h1 {
-            font-size: 72px;
-            margin: 0;
-            color: #667eea;
-        }
-        p {
-            font-size: 18px;
-            color: #666;
-            margin: 20px 0;
-        }
-        a {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 30px;
-            background-color: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        a:hover {
-            background-color: #764ba2;
-        }
-    </style>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>404</h1>
-        <p>Oops! The page you're looking for doesn't exist.</p>
-        <a href="/">Go Back Home</a>
-    </div>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">Sinosuke</div>
+            <ul class="nav-menu">
+                <li><a href="/">Home</a></li>
+                <li><a href="/about.html">About</a></li>
+                <li><a href="/projects.html">Projects</a></li>
+                <li><a href="/contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="error-section">
+            <div class="error-content">
+                <h1 class="error-code">404</h1>
+                <h2 class="error-title">Page Not Found</h2>
+                <p class="error-message">
+                    Oops! The page you're looking for seems to have wandered off. 
+                    It might have been moved, deleted, or perhaps it never existed.
+                </p>
+                <div class="error-suggestions">
+                    <p>Here are some helpful links instead:</p>
+                    <div class="error-links">
+                        <a href="/" class="btn btn-primary">Go Home</a>
+                        <a href="/projects.html" class="btn btn-secondary">View Projects</a>
+                        <a href="/contact.html" class="btn btn-secondary">Contact Me</a>
+                    </div>
+                </div>
+                <div class="error-ascii">
+                    <pre>
+    ¯\_(ツ)_/¯
+                    </pre>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Sinosuke. Built with my custom C++ HTTP Server.</p>
+        </div>
+    </footer>
 </body>
 </html>
