@@ -13,6 +13,9 @@
 #include <condition_variable>
 #include <fstream>
 #include <functional>
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 struct RequestBuffer
 {
@@ -20,7 +23,10 @@ struct RequestBuffer
     std::string path;
     std::string version;
     std::unordered_map<std::string, std::string> headers;
+    std::unordered_map<std::string, std::string> queryParams;
     std::string body;
+    json bodyJson;
+    std::map<std::string, std::string> cookies;
 };
 
 class Request{
@@ -30,4 +36,5 @@ class Request{
         int connfd; 
         Request(int connfd);
         void parseRequest();
+        void parseCookies(std::string cookieString);
 };

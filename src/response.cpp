@@ -40,9 +40,17 @@ Response::Response(int connfd)
 
 Response::~Response() {};
 
-void Response::setHTTPHeader(std::string key, std::string value)
-{
+void Response::setHTTPHeader(std::string key, std::string value){
     headers[key] = value;
+}
+
+void Response::setCookie(std::string key, std::string value, cookieOptions options){
+    if (options.Secure) value += "; Secure";
+    if (options.HttpOnly) value += "; HttpOnly"; 
+    if (!options.SameSite.empty()) value += "; SameSite=" + options.SameSite; 
+    if (options.Max_Age) value += "; Max-Age=" + std::to_string(options.Max_Age);
+    if (!options.Path.empty()) value += "; Path=" + options.Path;
+    setHTTPHeader("Set-Cookie", key + "=" + value);
 }
 
 std::string Response::prepareRequest(){

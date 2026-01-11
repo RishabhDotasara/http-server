@@ -1,4 +1,7 @@
 #include "middlewares.hpp"
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 // --- URL Decoder Middleware
 void urlDecode(Request &req, Response &res, Next next)
@@ -26,4 +29,68 @@ void urlDecode(Request &req, Response &res, Next next)
 
     req.data.path = decodedString;
     next();
+}
+
+void paramExtractor(Request &req, Response &res, Next next){
+    size_t qm = req.data.path.find('?');
+
+    if (qm == req.data.path.npos) {
+        next(); 
+        return;
+    }
+
+    std::string queryString = req.data.path.substr(qm+1, req.data.path.size() - qm - 1);
+    size_t ampPos = queryString.find_first_of('&', 0);
+    
+    // update the path without the query param 
+    req.data.path  = req.data.path.substr(0, qm);
+
+    int i = 0;
+    while ( i < queryString.length()){
+        char x = queryString[i]; 
+        // std::cout << x << "\n";
+        
+        std::string key; 
+        std::string value; 
+        
+        // find the next & : key=value&key=value
+        ampPos = queryString.find_first_of('&', i);
+
+        if (ampPos == std::string::npos) ampPos = queryString.length() - 1;
+
+
+        size_t eql = queryString.find_first_of('=', i);
+
+        key = queryString.substr(i, eql - i); 
+        value = queryString.substr(eql+1, ampPos - eql - 1);
+
+        req.data.queryParams[key] = value;
+
+        // std::cout << key << ":" << value << "\n";
+
+        i = ampPos + 1; 
+    }
+
+
+    
+    next();
+}
+
+void parseJson(Request &req, Response &res, Next next){
+    // this converts the body attribute in a json object. 
+
+    // only parse if the body is json 
+    // std::cout << req.data.body << "\n";
+    if (req.data.headers["Content-Type"] != "application/json") 
+    {
+        next();
+        return;
+    }
+
+    req.data.bodyJson = json::parse(req.data.body);
+    next();
+}
+
+void parseCookies(Request &req, Response &res, Next next){
+    
 }

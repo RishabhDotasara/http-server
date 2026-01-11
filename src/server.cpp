@@ -36,9 +36,8 @@ Server::Server(int NOT, int PORT)
         }
     }
 };
-Server::~Server() {};
 
-// --- Helper function for the next() call in middlewares
+Server::~Server() {};
 
 void Server::worker(std::vector<int> &conns, Server *server)
 {

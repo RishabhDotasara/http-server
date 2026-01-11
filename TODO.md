@@ -1,13 +1,13 @@
 - [x] Implement Methods 
 - [x] Implement CORS
 - [x] Abstract the route into a function that takes both route and method and the callback function.
-- [ ] Implement middlewares 
+- [x] Implement middlewares 
 
 ## Core Features
 - [ ] Request body parsing (JSON, URL-encoded, multipart/form-data)
-- [ ] Query parameters parsing (/api/users?id=123)
+- [x] Query parameters parsing (/api/users?id=123)
 - [ ] URL path parameters (/users/:id)
-- [ ] Session/Cookie support (Parse Cookie header, Set-Cookie response)
+- [x] Session/Cookie support (Parse Cookie header, Set-Cookie response)
 - [ ] Proper error handling (500 pages, timeouts, malformed requests)
 - [ ] Request body size limits
 

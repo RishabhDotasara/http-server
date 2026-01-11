@@ -3,8 +3,32 @@
 
 Request::Request(int connfd):connfd(connfd){
     // on receiving the data we will parse it and store in the 
+    data.bodyJson = {};
     parseRequest();
 };
+
+void Request::parseCookies(std::string cookieStr){
+    size_t colon = cookieStr.find_first_of(':'); 
+    cookieStr = cookieStr.substr(colon + 1, cookieStr.length() - colon - 1); 
+
+    uint i = 0; 
+    while (i < cookieStr.length()){
+        size_t semicol = cookieStr.find_first_of(';', i); 
+
+        if (semicol == std::string::npos){
+            semicol = cookieStr.length();
+        }
+
+        size_t eqls = cookieStr.find_first_of('=', i);
+
+        std::string key = cookieStr.substr(i, eqls - i); 
+        std::string value = cookieStr.substr(eqls+1, semicol - eqls - 1); 
+
+        data.cookies[key] = value; 
+
+        i = semicol + 1; 
+    };
+}
 
 void Request::parseRequest()
 {
@@ -47,6 +71,9 @@ void Request::parseRequest()
             std::string value = line.substr(colon + 1, line.size() - colon - 1);
             data.headers[key] = value;
         }
+
+        // parse the cookies here 
+        parseCookies(data.headers["Cookie"]);
 
         // now the next all bytes are just body
         std::string body;

@@ -4,6 +4,14 @@
 #include <fstream>
 #include <sys/socket.h>
 
+struct cookieOptions{
+    bool HttpOnly; 
+    bool Secure; 
+    std::string SameSite;
+    uint Max_Age;
+    std::string Path;
+};
+
 class Response{
     public: 
         int connfd;
@@ -20,6 +28,7 @@ class Response{
         void sendFile(std::string &filepath, int statusCode=200);
         void sendHTML(std::string html, int statusCode=200);
         void setHTTPHeader(std::string contentType, std::string ContentLength);
+        void setCookie(std::string key, std::string value, cookieOptions options);
         std::string prepareRequest(); 
         std::string getContentType(const std::string &filepath);
 };
