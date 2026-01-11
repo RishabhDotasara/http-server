@@ -1,0 +1,4 @@
+- Implement Methods 
+- Implement middlewares 
+- Abstract the route into a function that takes both route and method and the callback function.
+- Support TLS certificates 

@@ -2,50 +2,46 @@
 #include "server.hpp"
 #include "request.hpp"
 #include "response.hpp"
-#include <filesystem> 
-
+#include <filesystem>
 
 std::mutex mtx;
 std::condition_variable cv;
 
-Server::Server(int NOT, int PORT){
+Server::Server(int NOT, int PORT)
+{
     this->NOT = NOT;
     this->PORT = PORT;
 
-    // for all the files in pucliv folder, already create the paths for all of them 
-    namespace fs = std::filesystem ;
+    // for all the files in pucliv folder, already create the paths for all of them
+    namespace fs = std::filesystem;
 
     for (const auto &entry : fs::directory_iterator("public"))
     {
         if (entry.is_regular_file())
         {
             std::string filename = entry.path().filename().string();
-            std::string route = "/" + filename;
-
-            // Special case for index.html -> "/"
-            if (filename == "index.html")
-            {
-                route = "/";
-            }
+            std::string route = "/public/" + filename;
 
             // Register route
-            pathMap[route] = [filename](Request &req, Response &res)
+            pathMap[{route, "GET"}] = [filename](Request &req, Response &res)
             {
                 std::string filepath = "public/" + filename;
-                res.sendFile(filepath);
+                res.sendFile(filepath, 200);
             };
 
             std::cout << "[INFO] Registered route: " << route << " -> " << filename << "\n";
         }
     }
 };
-Server::~Server(){};
+Server::~Server() {};
 
-void Server::worker(std::vector<int> &conns, Server* server){
+void Server::worker(std::vector<int> &conns, Server *server)
+{
 
-    while (true){
+    while (true)
+    {
         int connfd;
-        { 
+        {
             std::unique_lock<std::mutex> lock(mtx);
 
             cv.wait(lock, [&conns]
@@ -59,30 +55,40 @@ void Server::worker(std::vector<int> &conns, Server* server){
             conns.pop_back();
         }
 
-
-        // request buffer 
+        // request buffer
         Request request{connfd};
         Response response{connfd};
 
-        std::cout << "Method: " << request.data.method << "\n"
-                  << "Path: " << request.data.path << "\n"
-                  << "Version: " << request.data.version << "\n"
-                  << "Body: " << request.data.body << "\n"
-                  << std::flush;
-                  std::cout << "\n";
+        // call the particular mapped function in here
+        // ---- Route Matching ----
+        auto it = server->pathMap.find({request.data.path, request.data.method});
+        bool routeExists = false;
 
-        // call the particular mapped function in here 
-        auto it = server->pathMap.find(request.data.path); 
-        if (it != server->pathMap.end()){
+        for (const auto it : server->pathMap)
+        {
+            if (it.first.first == request.data.path)
+                routeExists = true;
+        }
+
+        if (it != server->pathMap.end())
+        {
             it->second(request, response);
         }
-        else {
-            response.sendHTML("<h1>Page Not Found!</h1>");
+        else if (routeExists){
+            // return 405 
+            response.sendHTML("<h1>Method Not Allowed!</h1>", 405);
         }
-        close(connfd);
-       
-    }
+        else
+        {
+            std::string filepath = "public/404.html";
+            response.sendFile(filepath, 404);
+        }
 
+        std::cout << "[REQUEST] " << request.data.method << " " << request.data.path << " " << response.status << "\n"
+                  << std::flush;
+
+        close(connfd);
+    }
 }
 
 void Server::start()
@@ -96,7 +102,7 @@ void Server::start()
     }
     std::cout << "[INFO] Socket Setup Complete!\n";
 
-    // to reuse the port 
+    // to reuse the port
     int opt = 1;
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
@@ -112,7 +118,6 @@ void Server::start()
     if (bind(server_socket, (sockaddr *)&sock_addr, sizeof(sock_addr)) < 0)
     {
         perror("bind");
-        
     }
 
     std::cout << "[INFO] Listening at PORT " + std::to_string(PORT) << "\n";
@@ -122,15 +127,15 @@ void Server::start()
     sockaddr_in peer_addr{};
     socklen_t peer_addr_len = sizeof(peer_addr);
 
+    // initialise the thread pool
 
-    // initialise the thread pool 
-    
-    int N = NOT; 
-    
+    int N = NOT;
+
     std::vector<int> conns;
-    
-    // start the threads 
-    for (int i = 0; i < N; i++){
+
+    // start the threads
+    for (int i = 0; i < N; i++)
+    {
         std::thread t(worker, std::ref(conns), this);
         t.detach();
     }
@@ -150,4 +155,34 @@ void Server::start()
         conns.push_back(connfd);
         cv.notify_one();
     }
+}
+
+void Server::registerRoute(std::string route, std::string method, std::function<void(Request &, Response &)> callback)
+{
+    this->pathMap[{route, method}] = callback;
+}
+
+void Server::get(std::string route, std::function<void(Request &req, Response &res)> callback)
+{
+    this->registerRoute(route, "GET", callback);
+}
+
+void Server::post(std::string route, std::function<void(Request &req, Response &res)> callback)
+{
+    this->registerRoute(route, "POST", callback);
+}
+
+void Server::put(std::string route, std::function<void(Request &req, Response &res)> callback)
+{
+    this->registerRoute(route, "PUT", callback);
+}
+
+void Server::patch(std::string route, std::function<void(Request &req, Response &res)> callback)
+{
+    this->registerRoute(route, "PATCH", callback);
+}
+
+void Server::del(std::string route, std::function<void(Request &req, Response &res)> callback)
+{
+    this->registerRoute(route, "DELETE", callback);
 }

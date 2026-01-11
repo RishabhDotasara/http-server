@@ -1,36 +1,67 @@
 #include "response.hpp"
+#include <map>
 
-
-Response::Response(int connfd){
+Response::Response(int connfd)
+{
     this->connfd = connfd;
-    STATUSES["success"] = "200 OK";
-    STATUSES["notFound"] = "404 Not Found";
-    STATUSES["serverError"] = "500 Internal Server Error";
+    // 2xx Success
+    STATUSES[200] = "200 OK";
+    STATUSES[201] = "201 Created";
+    STATUSES[202] = "202 Accepted";
+    STATUSES[204] = "204 No Content";
+
+    // 3xx Redirection
+    STATUSES[301] = "301 Moved Permanently";
+    STATUSES[302] = "302 Found";
+    STATUSES[304] = "304 Not Modified";
+    STATUSES[307] = "307 Temporary Redirect";
+    STATUSES[308] = "308 Permanent Redirect";
+
+    // 4xx Client Errors
+    STATUSES[400] = "400 Bad Request";
+    STATUSES[401] = "401 Unauthorized";
+    STATUSES[403] = "403 Forbidden";
+    STATUSES[404] = "404 Not Found";
+    STATUSES[405] = "405 Method Not Allowed";
+    STATUSES[408] = "408 Request Timeout";
+    STATUSES[409] = "409 Conflict";
+    STATUSES[410] = "410 Gone";
+    STATUSES[413] = "413 Payload Too Large";
+    STATUSES[415] = "415 Unsupported Media Type";
+    STATUSES[429] = "429 Too Many Requests";
+
+    // 5xx Server Errors
+    STATUSES[500] = "500 Internal Server Error";
+    STATUSES[501] = "501 Not Implemented";
+    STATUSES[502] = "502 Bad Gateway";
+    STATUSES[503] = "503 Service Unavailable";
+    STATUSES[504] = "504 Gateway Timeout";
 }
 
-Response::~Response(){};
+Response::~Response() {};
 
 std::string Response::getHTTPHeaders(std::string status, std::string contentType, std::string ContentLength)
 {
     std::string headers =
         "HTTP/1.1 " + status + "\r\n"
-                               "Content-Type: " +
-        contentType + "\r\n"
-                      "Content-Length: " +
-        ContentLength + "\r\n"
-                        "\r\n";
+        "Content-Type: " + contentType + "\r\n"
+        "Content-Length: " + ContentLength + "\r\n"
+        "\r\n";
 
     return headers;
 }
 
-void Response::sendFile(std::string &filepath){
+void Response::sendFile(std::string &filepath, int statusCode)
+{
     // in this function we will need to store the file contents in the buffer first and then send  them through the socket.
     // open the file
+    status = STATUSES[statusCode];
     filepath = filepath;
     std::ifstream file(filepath, std::ios::binary);
 
     if (!file)
     {
+        status = STATUSES[404];
         file.open(notFoundPath, std::ios::binary);
     }
 
@@ -40,7 +71,7 @@ void Response::sendFile(std::string &filepath){
     file.seekg(0, std::ios::beg);
 
     // now send the file in the reponse with appropriate file type
-    std::string headers = getHTTPHeaders(STATUSES["success"], getContentType(filepath), std::to_string(size));
+    std::string headers = getHTTPHeaders(STATUSES[statusCode], getContentType(filepath), std::to_string(size));
 
     send(connfd, headers.c_str(), headers.size(), 0);
 
@@ -54,7 +85,7 @@ void Response::sendFile(std::string &filepath){
 
 std::string Response::getContentType(const std::string &filepath)
 {
-    static const std::unordered_map<std::string, std::string> mimeTypes = {
+    static const std::map<std::string, std::string> mimeTypes = {
         // HTML/CSS/JS
         {"html", "text/html"},
         {"htm", "text/html"},
@@ -114,10 +145,11 @@ std::string Response::getContentType(const std::string &filepath)
     return "application/octet-stream";
 }
 
-void Response::sendHTML(std::string html)
+void Response::sendHTML(std::string html, int statusCode)
 {
     // prepare the reponse
-    std::string headers = getHTTPHeaders("success", "text/html", std::to_string(html.size()));
+    status = STATUSES[statusCode];
+    std::string headers = getHTTPHeaders(STATUSES[statusCode], "text/html", std::to_string(html.size()));
     std::string response = headers + "\r\n" + html;
     // now send it in the response
     send(connfd, response.c_str(), response.size(), 0);
