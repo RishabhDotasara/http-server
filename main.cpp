@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "middlewares.hpp"
 
 int main()
 {
@@ -10,6 +11,9 @@ int main()
     config.methods = "GET, POST, PUT, PATCH";
     config.headers = "Content-Type, Authorization";
     server.setCors(config);
+
+    // ----- Add all middlewares here 
+    server.use(urlDecode);
 
     // ---- ROUTES ----
     server.get("/index", [](Request &req, Response &res){

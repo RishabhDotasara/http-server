@@ -11,9 +11,9 @@ Server::Server(int NOT, int PORT)
 {
     this->NOT = NOT;
     this->PORT = PORT;
-    CORS["Access-Control-Allow-Origin"] = ""; 
-    CORS["Access-Control-Allow-Methods"] = ""; 
-    CORS["Access-Control-Allow-Headers"] = ""; 
+    CORS["Access-Control-Allow-Origin"] = "";
+    CORS["Access-Control-Allow-Methods"] = "";
+    CORS["Access-Control-Allow-Headers"] = "";
 
     // for all the files in pucliv folder, already create the paths for all of them
     namespace fs = std::filesystem;
@@ -37,6 +37,8 @@ Server::Server(int NOT, int PORT)
     }
 };
 Server::~Server() {};
+
+// --- Helper function for the next() call in middlewares
 
 void Server::worker(std::vector<int> &conns, Server *server)
 {
@@ -63,20 +65,39 @@ void Server::worker(std::vector<int> &conns, Server *server)
         Response response{connfd};
 
         // ---- CORS SETUP -----
-        // so if we get a OPTIONS request, send the response with some set headers. 
+        // so if we get a OPTIONS request, send the response with some set headers.
 
-        // apply cors headers to all responses 
-        for (auto &it: server->CORS){
+        // apply cors headers to all responses
+        for (auto &it : server->CORS)
+        {
             response.setHTTPHeader(it.first, it.second);
         }
 
-
-        if (request.data.method == "OPTIONS"){
+        if (request.data.method == "OPTIONS")
+        {
             response.sendHTML("", 204);
             close(connfd);
             continue;
         }
 
+        // ---- Middleware execution before the main handler
+        {
+            bool executeNext = true;
+           
+            for (Middleware func : server->middlewares)
+            {
+                executeNext = false;
+                
+                func(request, response, [&executeNext](){
+                    executeNext = true;
+                });
+
+                if (!executeNext) break;
+            }
+
+            // if the last middleware didnt call next, we just leave the request there
+            if (!executeNext) continue;
+        }
 
         // call the particular mapped function in here
         // ---- Route Matching ----
@@ -93,8 +114,9 @@ void Server::worker(std::vector<int> &conns, Server *server)
         {
             it->second(request, response);
         }
-        else if (routeExists){
-            // return 405 
+        else if (routeExists)
+        {
+            // return 405
             response.sendHTML("<h1>Method Not Allowed!</h1>", 405);
         }
         else
@@ -181,12 +203,18 @@ void Server::registerRoute(std::string route, std::string method, std::function<
     this->pathMap[{route, method}] = callback;
 }
 
-void Server::setCors(CorsConfig corsConfig){
+void Server::setCors(CorsConfig corsConfig)
+{
     CORS["Access-Control-Allow-Origin"] = corsConfig.origins;
     CORS["Access-Control-Allow-Methods"] = corsConfig.methods;
     CORS["Access-Control-Allow-Headers"] = corsConfig.headers;
     CORS["Access-Control-Max-Age"] = "86400";
 }
+
+void Server::use(Middleware func){
+    middlewares.push_back(func);
+}
+
 
 void Server::get(std::string route, std::function<void(Request &req, Response &res)> callback)
 {

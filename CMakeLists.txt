@@ -22,6 +22,7 @@ add_executable(server
     src/http.cpp
     src/request.cpp
     src/response.cpp
+    src/middlewares.cpp
 )
 
 # Include directories
