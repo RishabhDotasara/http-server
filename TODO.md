@@ -1,5 +1,5 @@
 - [x] Implement Methods 
-- [] Implement CORS
-- [] Implement middlewares 
-- [] Abstract the route into a function that takes both route and method and the callback function.
-- [] Support TLS certificates 
+- [x] Implement CORS
+- [x] Abstract the route into a function that takes both route and method and the callback function.
+- [ ] Implement middlewares 
+- [ ] Support TLS certificates 
