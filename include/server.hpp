@@ -14,6 +14,13 @@
 #include "request.hpp"
 #include "response.hpp"
 #include <map>
+#include <vector> 
+
+struct CorsConfig{
+    std::string origins; 
+    std::string methods; 
+    std::string headers; 
+};
 
 class Server
 {
@@ -21,6 +28,7 @@ public:
     int NOT{4};
     int PORT{3000};
     std::map<std::pair<std::string, std::string>, std::function<void(Request &, Response &)>> pathMap;
+    std::map<std::string, std::string> CORS;
 
     Server(int NOT, int PORT);
     ~Server();
@@ -28,6 +36,7 @@ public:
     void start();
     static void worker(std::vector<int> &conns, Server *server);
     void registerRoute(std::string route, std::string method, std::function<void(Request &, Response &)>);
+    void setCors(CorsConfig corsConfig);
     void get(std::string route, std::function<void(Request &req, Response &res)> callback);
     void post(std::string route, std::function<void(Request &req, Response &res)> callback);
     void put(std::string route, std::function<void(Request &req, Response &res)> callback);

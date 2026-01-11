@@ -40,15 +40,21 @@ Response::Response(int connfd)
 
 Response::~Response() {};
 
-std::string Response::getHTTPHeaders(std::string status, std::string contentType, std::string ContentLength)
+void Response::setHTTPHeader(std::string key, std::string value)
 {
-    std::string headers =
-        "HTTP/1.1 " + status + "\r\n"
-        "Content-Type: " + contentType + "\r\n"
-        "Content-Length: " + ContentLength + "\r\n"
-        "\r\n";
+    headers[key] = value;
+}
 
-    return headers;
+std::string Response::prepareRequest(){
+    std::string request = "HTTP/1.1 " + status + "\r\n"; 
+    for (auto &it: headers){
+        request += it.first + ": " + it.second + "\r\n";
+    } 
+    // --- Empty line for headers ending 
+    request += "\r\n"; 
+    // ---- Body Starts from here ------ 
+    request += this->body; 
+    return request;
 }
 
 void Response::sendFile(std::string &filepath, int statusCode)
@@ -71,9 +77,12 @@ void Response::sendFile(std::string &filepath, int statusCode)
     file.seekg(0, std::ios::beg);
 
     // now send the file in the reponse with appropriate file type
-    std::string headers = getHTTPHeaders(STATUSES[statusCode], getContentType(filepath), std::to_string(size));
+    // std::string headers = getHTTPHeaders(STATUSES[statusCode], getContentType(filepath), std::to_string(size));
+    this->setHTTPHeader("Content-Type", getContentType(filepath)); 
+    this->setHTTPHeader("Content-Length", std::to_string(size)); 
+    std::string preparedRequest = prepareRequest();
 
-    send(connfd, headers.c_str(), headers.size(), 0);
+    send(connfd, preparedRequest.c_str(), preparedRequest.size(), 0);
 
     // we will chunk the file here as we cannot create those big buffers in memory
     char buffer[8092];
@@ -149,8 +158,10 @@ void Response::sendHTML(std::string html, int statusCode)
 {
     // prepare the reponse
     status = STATUSES[statusCode];
-    std::string headers = getHTTPHeaders(STATUSES[statusCode], "text/html", std::to_string(html.size()));
-    std::string response = headers + "\r\n" + html;
+    this->setHTTPHeader("Content-Type", "text/html");
+    this->setHTTPHeader("Content-Length", std::to_string(html.size()));
+    this->body = html;
+    std::string preparedRequest = prepareRequest();
     // now send it in the response
-    send(connfd, response.c_str(), response.size(), 0);
+    send(connfd, preparedRequest.c_str(), preparedRequest.size(), 0);
 };

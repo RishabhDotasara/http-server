@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CORS Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>CORS Test for localhost:8081</h1>
+
+    <button onclick="testGET()">Test GET /index</button>
+    <button onclick="testPOST()">Test POST /index</button>
+    <button onclick="testPreflight()">Test Preflight (OPTIONS)</button>
+
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        function showResult(message, isSuccess) {
+            const result = document.getElementById('result');
+            result.className = isSuccess ? 'success' : 'error';
+            result.innerHTML = `<h3>${isSuccess ? '✅' : '❌'} ${message}</h3>`;
+        }
+
+        async function testGET() {
+            try {
+                const response = await fetch(`${API_URL}/index`);
+                const data = await response.text();
+                showResult(`GET Success! Response: ${data}`, true);
+            } catch (error) {
+                showResult(`GET Failed: ${error.message}`, false);
+            }
+        }
+
+        async function testPOST() {
+            try {
+                const response = await fetch(`${API_URL}/index`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ test: 'data' })
+                });
+                const data = await response.text();
+                showResult(`POST Success! Response: ${data}`, true);
+            } catch (error) {
+                showResult(`POST Failed: ${error.message}`, false);
+            }
+        }
+
+        async function testPreflight() {
+            try {
+                // This will trigger a preflight OPTIONS request
+                const response = await fetch(`${API_URL}/index`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Custom-Header': 'test'
+                    },
+                    body: JSON.stringify({ test: 'data' })
+                });
+                const data = await response.text();
+                showResult(`Preflight Success! Server handled OPTIONS correctly`, true);
+            } catch (error) {
+                showResult(`Preflight Failed: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+
+</html>

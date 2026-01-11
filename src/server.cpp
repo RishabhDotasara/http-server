@@ -11,6 +11,9 @@ Server::Server(int NOT, int PORT)
 {
     this->NOT = NOT;
     this->PORT = PORT;
+    CORS["Access-Control-Allow-Origin"] = ""; 
+    CORS["Access-Control-Allow-Methods"] = ""; 
+    CORS["Access-Control-Allow-Headers"] = ""; 
 
     // for all the files in pucliv folder, already create the paths for all of them
     namespace fs = std::filesystem;
@@ -59,12 +62,28 @@ void Server::worker(std::vector<int> &conns, Server *server)
         Request request{connfd};
         Response response{connfd};
 
+        // ---- CORS SETUP -----
+        // so if we get a OPTIONS request, send the response with some set headers. 
+
+        // apply cors headers to all responses 
+        for (auto &it: server->CORS){
+            response.setHTTPHeader(it.first, it.second);
+        }
+
+
+        if (request.data.method == "OPTIONS"){
+            response.sendHTML("", 204);
+            close(connfd);
+            continue;
+        }
+
+
         // call the particular mapped function in here
         // ---- Route Matching ----
         auto it = server->pathMap.find({request.data.path, request.data.method});
         bool routeExists = false;
 
-        for (const auto it : server->pathMap)
+        for (const auto &it : server->pathMap)
         {
             if (it.first.first == request.data.path)
                 routeExists = true;
@@ -112,7 +131,7 @@ void Server::start()
 
     sockaddr_in sock_addr{};
     sock_addr.sin_family = AF_INET;
-    sock_addr.sin_port = htons(8081);
+    sock_addr.sin_port = htons(PORT);
     sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(server_socket, (sockaddr *)&sock_addr, sizeof(sock_addr)) < 0)
@@ -160,6 +179,13 @@ void Server::start()
 void Server::registerRoute(std::string route, std::string method, std::function<void(Request &, Response &)> callback)
 {
     this->pathMap[{route, method}] = callback;
+}
+
+void Server::setCors(CorsConfig corsConfig){
+    CORS["Access-Control-Allow-Origin"] = corsConfig.origins;
+    CORS["Access-Control-Allow-Methods"] = corsConfig.methods;
+    CORS["Access-Control-Allow-Headers"] = corsConfig.headers;
+    CORS["Access-Control-Max-Age"] = "86400";
 }
 
 void Server::get(std::string route, std::function<void(Request &req, Response &res)> callback)
