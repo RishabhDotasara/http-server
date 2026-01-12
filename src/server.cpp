@@ -4,6 +4,7 @@
 #include "response.hpp"
 #include "logger.hpp"
 #include <filesystem>
+#include <arpa/inet.h>
 
 std::mutex mtx;
 std::condition_variable cv;
@@ -46,6 +47,7 @@ void Server::worker(std::vector<int> &conns, Server *server)
     while (true)
     {
         int connfd;
+
         {
             std::unique_lock<std::mutex> lock(mtx);
 
@@ -60,12 +62,48 @@ void Server::worker(std::vector<int> &conns, Server *server)
             conns.pop_back();
         }
 
+        // -- We have the connection, use that to get the IP
+        sockaddr_in peeraddr;
+        socklen_t peeraddr_len = sizeof(peeraddr);
+        getpeername(connfd, (sockaddr *)&peeraddr, &peeraddr_len);
+        char ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(peeraddr.sin_addr), ip, INET_ADDRSTRLEN);
+
         // request buffer
         Request request{connfd};
         Response response{connfd};
 
-        // ---- CHECK REQUEST BODY SIZE 
-        if (!request.data.headers["Content-Length"].empty() && std::stoi(request.data.headers["Content-Length"]) > server->REQUEST_BODY_SIZE_LIMIT){
+        // -- Set IP in the request
+        std::string req_ip{ip, INET_ADDRSTRLEN};
+        request.data.ip = req_ip;
+
+        auto rateLimit_it = server->rateLimitBucket.find(req_ip);
+        std::time_t now = std::time(nullptr);
+    
+        if ((rateLimit_it != server->rateLimitBucket.end()))
+        {
+            if (rateLimit_it->second.second <= 0 && now - rateLimit_it->second.first <server->REQUEST_LIMIT_WINDOW)
+            {
+                response.sendHTML("", 429);
+                continue;
+            }
+            else if (rateLimit_it->second.second <= 0 && now - rateLimit_it->second.first >= server->REQUEST_LIMIT_WINDOW)
+            {
+                rateLimit_it->second.second = server->REQUEST_LIMIT;
+                logger.debug("Rate limit window reset for IP: " + req_ip);
+            }
+            else {
+                rateLimit_it->second.second -= 1;
+            }
+        }
+        else
+        {
+            server->rateLimitBucket[req_ip] = {now, server->REQUEST_LIMIT};
+        }
+
+        // ---- CHECK REQUEST BODY SIZE
+        if (!request.data.headers["Content-Length"].empty() && std::stoi(request.data.headers["Content-Length"]) > server->REQUEST_BODY_SIZE_LIMIT)
+        {
             response.sendHTML("", 413);
             continue;
         }
@@ -89,67 +127,76 @@ void Server::worker(std::vector<int> &conns, Server *server)
         // ---- Middleware execution before the main handler
         {
             bool executeNext = true;
-           
+
             for (Middleware func : server->middlewares)
             {
                 executeNext = false;
-                
-                func(request, response, [&executeNext](){
-                    executeNext = true;
-                });
 
-                if (!executeNext) break;
+                func(request, response, [&executeNext]()
+                     { executeNext = true; });
+
+                if (!executeNext)
+                    break;
             }
 
             // if the last middleware didnt call next, we just leave the request there
-            if (!executeNext) continue;
+            if (!executeNext)
+                continue;
         }
 
-      
         // ---- Route Matching ----
         auto it = server->pathMap.find({request.data.path, request.data.method});
         bool routeExists = false;
-        bool dynamicParams = false; 
+        bool dynamicParams = false;
         size_t colonForDP = request.data.path.find_first_of(":");
-        if (colonForDP != std::string::npos) dynamicParams = true; 
+        if (colonForDP != std::string::npos)
+            dynamicParams = true;
 
-        // fill in the params becfore the function execution 
-        
-        for (auto &it : server->pathMap){
-            bool dynamicRoute = false; 
+        // fill in the params becfore the function execution
+
+        for (auto &it : server->pathMap)
+        {
+            bool dynamicRoute = false;
             std::string method = it.first.second;
             std::string route = it.first.first;
-            size_t colon = route.find_first_of(":"); 
-           
-            // dynamic route check 
-            if (colon != std::string::npos) dynamicRoute = true;
-             
+            size_t colon = route.find_first_of(":");
+
+            // dynamic route check
+            if (colon != std::string::npos)
+                dynamicRoute = true;
+
             // /usr/:id/role/:role
             // /usr/2/role/admin
-            if (dynamicRoute){
+            if (dynamicRoute)
+            {
 
-                // ---Check the path and the method 
-                if (request.data.path.substr(0, colon - 1) != route.substr(0, colon - 1)) continue;
-                if (request.data.method != it.first.second) continue;
+                // ---Check the path and the method
+                if (request.data.path.substr(0, colon - 1) != route.substr(0, colon - 1))
+                    continue;
+                if (request.data.method != it.first.second)
+                    continue;
 
-                // --- PARAM Extraction 
+                // --- PARAM Extraction
 
-                int i = colon; //path
-                int j = colon; // route 
-                while (i < request.data.path.length() && j < route.length()){
+                int i = colon; // path
+                int j = colon; // route
+                while (i < request.data.path.length() && j < route.length())
+                {
                     size_t nextSlashInPath = request.data.path.find_first_of("/", i);
                     size_t nextSlashInRoute = route.find_first_of("/", j);
 
-                    if (nextSlashInRoute == std::string::npos){
+                    if (nextSlashInRoute == std::string::npos)
+                    {
                         // nextSlashInPath = request.data.path.length();
                         nextSlashInRoute = route.length();
                     }
 
-                    // check if this one is a param or simple route 
-                    if (route[j] != ':' && request.data.path.substr(i, nextSlashInPath - i) == route.substr(j, nextSlashInRoute - j)){
-                        i = nextSlashInPath + 1; 
+                    // check if this one is a param or simple route
+                    if (route[j] != ':' && request.data.path.substr(i, nextSlashInPath - i) == route.substr(j, nextSlashInRoute - j))
+                    {
+                        i = nextSlashInPath + 1;
                         j = nextSlashInRoute + 1;
-                    continue;
+                        continue;
                     }
 
                     // if (nextSlashInPath == std::string::npos){
@@ -157,28 +204,27 @@ void Server::worker(std::vector<int> &conns, Server *server)
                     // }
 
                     std::string value = request.data.path.substr(i, nextSlashInPath - i);
-                    std::string key = route.substr(j+1, nextSlashInRoute - j - 1); 
-                    request.data.params[key] = value; 
+                    std::string key = route.substr(j + 1, nextSlashInRoute - j - 1);
+                    request.data.params[key] = value;
 
                     // std::cout << "[DEBUG] Extracted param: " << key << " = " << value << "\n";
 
-                    i = nextSlashInPath + 1; 
+                    i = nextSlashInPath + 1;
                     j = nextSlashInRoute + 1;
-                } 
+                }
 
-                // ---- Function Calling 
+                // ---- Function Calling
                 it.second(request, response);
             }
-            else {
-                // just check if the route matches 
-                if (request.data.path == route && request.data.method == it.first.second) it.second(request, response);
-                else continue;
+            else
+            {
+                // just check if the route matches
+                if (request.data.path == route && request.data.method == it.first.second)
+                    it.second(request, response);
+                else
+                    continue;
             }
-
-
         }
-
-    
 
         logger.request(request.data.method, request.data.path, response.status);
 
@@ -268,10 +314,10 @@ void Server::setCors(CorsConfig corsConfig)
     CORS["Access-Control-Max-Age"] = "86400";
 }
 
-void Server::use(Middleware func){
+void Server::use(Middleware func)
+{
     middlewares.push_back(func);
 }
-
 
 void Server::get(std::string route, std::function<void(Request &req, Response &res)> callback)
 {

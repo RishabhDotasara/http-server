@@ -35,7 +35,9 @@ public:
     std::map<std::pair<std::string, std::string>, std::function<void(Request &, Response &)>> pathMap;
     std::vector<Middleware> middlewares;
     std::map<std::string, std::string> CORS;
-
+    int REQUEST_LIMIT{100};
+    int REQUEST_LIMIT_WINDOW{60};
+    std::unordered_map<std::string, std::pair<std::time_t, int>> rateLimitBucket; //first is timestamp, then token count  
 
 
     Server(int NOT, int PORT);

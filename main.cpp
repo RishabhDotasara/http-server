@@ -19,6 +19,10 @@ int main()
 
     Server server(4, 3000);
 
+    // --- Rate Limit Setting--- IP based rate limiting
+    server.REQUEST_LIMIT = 100; 
+    server.REQUEST_LIMIT_WINDOW = 60; //in seconds
+
     // ----- CORS Polciy Setup
     CorsConfig config;
     config.origins = "*";

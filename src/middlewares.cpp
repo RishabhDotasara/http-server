@@ -91,6 +91,3 @@ void parseJson(Request &req, Response &res, Next next){
     next();
 }
 
-void parseCookies(Request &req, Response &res, Next next){
-    
-}

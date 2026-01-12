@@ -26,6 +26,7 @@ struct RequestBuffer
     std::unordered_map<std::string, std::string> queryParams;
     std::string body;
     json bodyJson;
+    std::string ip; 
     std::map<std::string, std::string> cookies;
     std::map<std::string, std::string> params; // this one her is to contain the dynamic params from the  URL
 };

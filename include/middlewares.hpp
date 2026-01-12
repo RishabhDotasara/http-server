@@ -10,4 +10,5 @@ void paramExtractor(Request& req, Response& res, Next next);
 // JSON Body Parser 
 void parseJson(Request& req, Response& res, Next next);
 
-void parseCookies(Request& req, Response& res, Next next);
+// Rate Limiter Middleware
+void rateLimit(Request& req, Response& res, Next next);
