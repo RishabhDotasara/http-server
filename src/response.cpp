@@ -1,4 +1,5 @@
 #include "response.hpp"
+#include "logger.hpp"
 #include <map>
 
 Response::Response(int connfd)
@@ -88,6 +89,7 @@ void Response::sendFile(std::string &filepath, int statusCode)
 
     if (!file)
     {
+        logger.warn("File not found: " + filepath);
         status = STATUSES[404];
         file.open(notFoundPath, std::ios::binary);
     }

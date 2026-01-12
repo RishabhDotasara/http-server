@@ -1,5 +1,6 @@
 #include "settings.hpp"
 #include "json.hpp"
+#include "logger.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -12,9 +13,10 @@ void Settings::loadFromFile(const std::string &filepath)
     std::ifstream file(filepath);
     if (!file.is_open())
     {
-        std::cerr << "[ERROR]: Could not open file " << filepath << std::endl;
+        logger.error("Could not open settings file: " + filepath);
         return;
     }
+    logger.info("Loading settings from: " + filepath);
 
     json settings = json::parse(file);
 

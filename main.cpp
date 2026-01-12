@@ -1,11 +1,22 @@
 #include "server.hpp"
 #include "middlewares.hpp"
 #include "json.hpp"
+#include "logger.hpp"
 
 using json = nlohmann::json;
 
 int main()
 {
+    // Configure logger
+    LoggerConfig logConfig;
+    logConfig.minLevel = LogLevel::DEBUG;
+    logConfig.showTimestamp = true;
+    logConfig.showColors = true;
+    logConfig.logToFile = false;
+    logger.configure(logConfig);
+
+    logger.info("Initializing HTTP Server...");
+
     Server server(4, 3000);
 
     // ----- CORS Polciy Setup

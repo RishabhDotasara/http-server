@@ -6,7 +6,7 @@
 ## Core Features
 - [ ] Request body parsing (JSON, URL-encoded, multipart/form-data)
 - [x] Query parameters parsing (/api/users?id=123)
-- [ ] URL path parameters (/users/:id)
+- [x] URL path parameters (/users/:id)
 - [x] Session/Cookie support (Parse Cookie header, Set-Cookie response)
 - [x] Proper error handling (500 pages, timeouts, malformed requests)
 - [x] Request body size limits
@@ -24,8 +24,8 @@
 - [ ] Input validation and sanitization
 
 ## Logging & Monitoring
-- [ ] Access logs (combined/common format)
-- [ ] Error logs
+- [x] Access logs (combined/common format)
+- [x] Error logs
 - [ ] Log rotation
 - [ ] Request metrics (count, response times, error rates)
 - [ ] Active connection tracking
@@ -37,7 +37,7 @@
 
 ## Routing Enhancements
 - [ ] Route groups/prefixes
-- [ ] Route parameters (/users/:id)
+- [x] Route parameters (/users/:id)
 - [ ] Wildcard routes (/files/*)
 - [ ] Route priority/ordering
 

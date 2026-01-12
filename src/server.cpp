@@ -2,6 +2,7 @@
 #include "server.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "logger.hpp"
 #include <filesystem>
 
 std::mutex mtx;
@@ -32,7 +33,7 @@ Server::Server(int NOT, int PORT)
                 res.sendFile(filepath, 200);
             };
 
-            std::cout << "[INFO] Registered route: " << route << " -> " << filename << "\n";
+            logger.debug("Auto-registered route: " + route + " -> " + filename);
         }
     }
 };
@@ -179,8 +180,7 @@ void Server::worker(std::vector<int> &conns, Server *server)
 
     
 
-        std::cout << "[REQUEST] " << request.data.method << " " << request.data.path << " " << response.status << "\n"
-                  << std::flush;
+        logger.request(request.data.method, request.data.path, response.status);
 
         close(connfd);
     }
@@ -192,18 +192,19 @@ void Server::start()
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0)
     {
-        perror("socket");
+        logger.fatal("Failed to create socket");
         exit(1);
     }
-    std::cout << "[INFO] Socket Setup Complete!\n";
+    logger.info("Socket created successfully");
 
     // to reuse the port
     int opt = 1;
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
-        perror("setsockopt");
+        logger.fatal("Failed to set socket options (SO_REUSEADDR)");
         exit(1);
     }
+    logger.debug("Socket option SO_REUSEADDR enabled");
 
     sockaddr_in sock_addr{};
     sock_addr.sin_family = AF_INET;
@@ -212,10 +213,11 @@ void Server::start()
 
     if (bind(server_socket, (sockaddr *)&sock_addr, sizeof(sock_addr)) < 0)
     {
-        perror("bind");
+        logger.fatal("Failed to bind socket to port " + std::to_string(PORT));
+        exit(1);
     }
 
-    std::cout << "[INFO] Listening at PORT " + std::to_string(PORT) << "\n";
+    logger.info("Server listening on port " + std::to_string(PORT));
 
     listen(server_socket, 5);
 
@@ -234,15 +236,16 @@ void Server::start()
         std::thread t(worker, std::ref(conns), this);
         t.detach();
     }
+    logger.info("Thread pool initialized with " + std::to_string(N) + " workers");
 
-    std::cout << "[INFO] Accepting Connections from clients!\n";
+    logger.info("Server ready - accepting connections");
     while (true)
     {
 
         int connfd = accept(server_socket, (sockaddr *)&peer_addr, &peer_addr_len);
         if (connfd < 0)
         {
-            perror("accept");
+            logger.error("Failed to accept connection");
             continue;
         }
 
