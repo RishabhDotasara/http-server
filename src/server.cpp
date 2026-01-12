@@ -123,8 +123,8 @@ void Server::worker(std::vector<int> &conns, Server *server)
             // dynamic route check 
             if (colon != std::string::npos) dynamicRoute = true;
              
-            // /usr/:id/:role 
-            // /usr/2/admin
+            // /usr/:id/role/:role
+            // /usr/2/role/admin
             if (dynamicRoute){
 
                 // ---Check the path and the method 
@@ -144,6 +144,13 @@ void Server::worker(std::vector<int> &conns, Server *server)
                         nextSlashInRoute = route.length();
                     }
 
+                    // check if this one is a param or simple route 
+                    if (route[j] != ':' && request.data.path.substr(i, nextSlashInPath - i) == route.substr(j, nextSlashInRoute - j)){
+                        i = nextSlashInPath + 1; 
+                        j = nextSlashInRoute + 1;
+                    continue;
+                    }
+
                     // if (nextSlashInPath == std::string::npos){
                     //     nextSlashInPath = request.data.path.length();
                     // }
@@ -152,7 +159,7 @@ void Server::worker(std::vector<int> &conns, Server *server)
                     std::string key = route.substr(j+1, nextSlashInRoute - j - 1); 
                     request.data.params[key] = value; 
 
-                    std::cout << "[DEBUG] Extracted param: " << key << " = " << value << "\n";
+                    // std::cout << "[DEBUG] Extracted param: " << key << " = " << value << "\n";
 
                     i = nextSlashInPath + 1; 
                     j = nextSlashInRoute + 1;
