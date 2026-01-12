@@ -42,6 +42,14 @@ int main()
         // std::cout << req.data.bodyJson << "\n";
     });
 
+    server.get("/index/:userId/:courseId", [](Request& req, Response& res){
+        res.sendHTML("<h1>You entered " + req.data.params["userId"] + " " + req.data.params["courseId"] + "</h1>", 200);
+    });
+
+      server.get("/usr/:userId/:courseId/:thi", [](Request& req, Response& res){
+        res.sendHTML("<h1>You entered " + req.data.params["userId"] + " " + req.data.params["courseId"] + " " +req.data.params["thi"] + " " +"</h1>", 200);
+    });
+
     server.start();
     return 0;
 }

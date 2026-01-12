@@ -63,6 +63,12 @@ void Server::worker(std::vector<int> &conns, Server *server)
         Request request{connfd};
         Response response{connfd};
 
+        // ---- CHECK REQUEST BODY SIZE 
+        if (!request.data.headers["Content-Length"].empty() && std::stoi(request.data.headers["Content-Length"]) > server->REQUEST_BODY_SIZE_LIMIT){
+            response.sendHTML("", 413);
+            continue;
+        }
+
         // ---- CORS SETUP -----
         // so if we get a OPTIONS request, send the response with some set headers.
 
@@ -98,31 +104,73 @@ void Server::worker(std::vector<int> &conns, Server *server)
             if (!executeNext) continue;
         }
 
-        // call the particular mapped function in here
+      
         // ---- Route Matching ----
         auto it = server->pathMap.find({request.data.path, request.data.method});
         bool routeExists = false;
+        bool dynamicParams = false; 
+        size_t colonForDP = request.data.path.find_first_of(":");
+        if (colonForDP != std::string::npos) dynamicParams = true; 
 
-        for (const auto &it : server->pathMap)
-        {
-            if (it.first.first == request.data.path)
-                routeExists = true;
+        // fill in the params becfore the function execution 
+        
+        for (auto &it : server->pathMap){
+            bool dynamicRoute = false; 
+            std::string method = it.first.second;
+            std::string route = it.first.first;
+            size_t colon = route.find_first_of(":"); 
+           
+            // dynamic route check 
+            if (colon != std::string::npos) dynamicRoute = true;
+             
+            // /usr/:id/:role 
+            // /usr/2/admin
+            if (dynamicRoute){
+
+                // ---Check the path and the method 
+                if (request.data.path.substr(0, colon - 1) != route.substr(0, colon - 1)) continue;
+                if (request.data.method != it.first.second) continue;
+
+                // --- PARAM Extraction 
+
+                int i = colon; //path
+                int j = colon; // route 
+                while (i < request.data.path.length() && j < route.length()){
+                    size_t nextSlashInPath = request.data.path.find_first_of("/", i);
+                    size_t nextSlashInRoute = route.find_first_of("/", j);
+
+                    if (nextSlashInRoute == std::string::npos){
+                        // nextSlashInPath = request.data.path.length();
+                        nextSlashInRoute = route.length();
+                    }
+
+                    // if (nextSlashInPath == std::string::npos){
+                    //     nextSlashInPath = request.data.path.length();
+                    // }
+
+                    std::string value = request.data.path.substr(i, nextSlashInPath - i);
+                    std::string key = route.substr(j+1, nextSlashInRoute - j - 1); 
+                    request.data.params[key] = value; 
+
+                    std::cout << "[DEBUG] Extracted param: " << key << " = " << value << "\n";
+
+                    i = nextSlashInPath + 1; 
+                    j = nextSlashInRoute + 1;
+                } 
+
+                // ---- Function Calling 
+                it.second(request, response);
+            }
+            else {
+                // just check if the route matches 
+                if (request.data.path == route && request.data.method == it.first.second) it.second(request, response);
+                else continue;
+            }
+
+
         }
 
-        if (it != server->pathMap.end())
-        {
-            it->second(request, response);
-        }
-        else if (routeExists)
-        {
-            // return 405
-            response.sendHTML("<h1>Method Not Allowed!</h1>", 405);
-        }
-        else
-        {
-            std::string filepath = "public/404.html";
-            response.sendFile(filepath, 404);
-        }
+    
 
         std::cout << "[REQUEST] " << request.data.method << " " << request.data.path << " " << response.status << "\n"
                   << std::flush;

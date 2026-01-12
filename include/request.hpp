@@ -27,6 +27,7 @@ struct RequestBuffer
     std::string body;
     json bodyJson;
     std::map<std::string, std::string> cookies;
+    std::map<std::string, std::string> params; // this one her is to contain the dynamic params from the  URL
 };
 
 class Request{

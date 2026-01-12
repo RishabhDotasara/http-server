@@ -1,0 +1,40 @@
+{
+    "server":{
+        "port": 3000, 
+        "num_threads": 4, 
+        "backlog": 10, 
+        "reuse_address": true
+    }, 
+    "paths": {
+        "public_dir": "public", 
+        "not_found_page": "public/404.html"
+    }, 
+    "cors": {
+        "enabled": true, 
+        "allowed_origins": "*", 
+        "allowed_methods": "GET, POST, PUT, DELETE, OPTIONS", 
+        "allowed_headers": "Content-Type, Authorization",
+        "max_age": 3600
+    },
+    "http":{
+        "version": "HTTP/1.1", 
+        "default_status": 200, 
+        "default_content_type": "application/octet-stream"
+    },
+    "cookies":{
+        "secure": false, 
+        "http_only": true, 
+        "same_site": "Lax",
+        "max_age": 86400,
+        "path": "/",
+        "domain": null,
+        "priority": "Medium",
+        "partitioned": false
+    },
+    "auto_routes": {
+        "enabled": false, 
+        "directory": "public", 
+        "method": "GET", 
+        "route_prefix": "/public"
+    }
+}

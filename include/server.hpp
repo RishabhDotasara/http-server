@@ -31,9 +31,12 @@ class Server
 public:
     int NOT{4};
     int PORT{3000};
+    int REQUEST_BODY_SIZE_LIMIT{8092}; //8 KB
     std::map<std::pair<std::string, std::string>, std::function<void(Request &, Response &)>> pathMap;
     std::vector<Middleware> middlewares;
     std::map<std::string, std::string> CORS;
+
+
 
     Server(int NOT, int PORT);
     ~Server();

@@ -38,6 +38,8 @@ void Request::parseRequest()
 
     if (bytes > 0)
     {
+
+
         std::string request(buffer, bytes);
         std::istringstream stream(request);
         std::string line;

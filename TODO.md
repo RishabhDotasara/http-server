@@ -8,8 +8,8 @@
 - [x] Query parameters parsing (/api/users?id=123)
 - [ ] URL path parameters (/users/:id)
 - [x] Session/Cookie support (Parse Cookie header, Set-Cookie response)
-- [ ] Proper error handling (500 pages, timeouts, malformed requests)
-- [ ] Request body size limits
+- [x] Proper error handling (500 pages, timeouts, malformed requests)
+- [x] Request body size limits
 
 ## HTTP/1.1 Features
 - [ ] Keep-Alive connections (connection pooling)
