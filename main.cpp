@@ -23,10 +23,17 @@ int main()
     // ---- ROUTES ----
     server.get("/index", [](Request &req, Response &res){
         std::string filepath = "public/index.html";
-        std::string SameSite{"Lax"};
-        std::string Path{"/index"};
-        uint Max_Age = 1000;
-        res.setCookie("testCookie", "testData", {true, true,SameSite , Max_Age, Path});
+        cookieOptions config;
+        config.Domain = "localhost.com"; 
+        config.Expiry_days_from_now = 5; 
+        config.HttpOnly = true; 
+        config.Max_Age = 3000; 
+        config.Path = "/index"; 
+        config.Priority = "Medium"; 
+        config.SameSite = "Lax"; 
+        config.Secure = false;
+        
+        res.setCookie("testCookie", "testData", config);
         res.sendFile(filepath); 
     });
 

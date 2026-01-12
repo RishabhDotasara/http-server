@@ -3,6 +3,8 @@
 #include <map>
 #include <fstream>
 #include <sys/socket.h>
+#include <chrono>
+
 
 struct cookieOptions{
     bool HttpOnly; 
@@ -10,6 +12,11 @@ struct cookieOptions{
     std::string SameSite;
     uint Max_Age;
     std::string Path;
+    std::string Domain; 
+    std::string Priority; 
+    bool Partitioned;
+    uint Expiry_days_from_now; 
+    
 };
 
 class Response{

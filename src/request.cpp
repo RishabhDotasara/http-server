@@ -73,8 +73,8 @@ void Request::parseRequest()
         }
 
         // parse the cookies here 
-        parseCookies(data.headers["Cookie"]);
-
+        if (!data.headers["Cookie"].empty()) parseCookies(data.headers["Cookie"]);
+        
         // now the next all bytes are just body
         std::string body;
         std::getline(stream, body, '\0');

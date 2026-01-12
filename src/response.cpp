@@ -45,11 +45,24 @@ void Response::setHTTPHeader(std::string key, std::string value){
 }
 
 void Response::setCookie(std::string key, std::string value, cookieOptions options){
-    if (options.Secure) value += "; Secure";
+    if (!options.SameSite.empty()) {
+        if (options.SameSite == "None") options.Secure = true;
+        value += "; SameSite=" + options.SameSite; 
+    }
     if (options.HttpOnly) value += "; HttpOnly"; 
-    if (!options.SameSite.empty()) value += "; SameSite=" + options.SameSite; 
+    if (options.Secure) value += "; Secure";
     if (options.Max_Age) value += "; Max-Age=" + std::to_string(options.Max_Age);
     if (!options.Path.empty()) value += "; Path=" + options.Path;
+    if (options.Expiry_days_from_now){
+        time_t raw = time(nullptr) + options.Expiry_days_from_now * 24 * 60 * 60;
+
+        struct tm gmt;
+        gmtime_r(&raw, &gmt); // or gmtime_s on Windows
+
+        char buf[100];
+        strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+        value += "; Expires=" + std::string(buf);
+    }
     setHTTPHeader("Set-Cookie", key + "=" + value);
 }
 
