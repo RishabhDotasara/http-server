@@ -39,7 +39,7 @@ public:
     int REQUEST_LIMIT{1000000};
     int REQUEST_LIMIT_WINDOW{1};
 
-    int CONNECTION_TIMEOUT{5}; // in seconds 
+    int CONNECTION_TIMEOUT{2}; // in seconds 
     int CONNECTION_MAX_REQUESTS{100}; 
 
     std::unordered_map<std::string, std::pair<std::time_t, int>> rateLimitBucket; //first is timestamp, then token count  

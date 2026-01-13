@@ -73,8 +73,8 @@ void Server::worker(std::vector<int> &conns, Server *server)
         timeout.tv_usec = 0;
         setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
-        int requestCount{0}; 
-        time_t start_timestamp = std::time(nullptr); 
+        int requestCount{0};
+        time_t start_timestamp = std::time(nullptr);
         time_t rolling_timestamp = std::time(nullptr);
 
         // loop to keep connections as supported in HTTP/1.1
@@ -84,17 +84,18 @@ void Server::worker(std::vector<int> &conns, Server *server)
             // request buffer
             Request request{connfd};
             Response response{connfd};
+            response.setHTTPHeader("Connection", "keep-alive");
+            response.setHTTPHeader("Keep-Alive", "timeout=" + std::to_string(server->CONNECTION_TIMEOUT) + ", max=" + std::to_string(server->CONNECTION_MAX_REQUESTS - requestCount));
+
             requestCount++;
 
-            // so rolling timestamp checks the time of inactivity on the connection 
-            if (request.data.method.empty()) {
+            // so rolling timestamp checks the time of inactivity on the connection
+            if (request.data.method.empty())
+            {
                 rolling_timestamp = std::time(nullptr);
-                // close(connfd); 
+                // close(connfd);
                 break;
             }
-            
-            
-
 
             // -- Set IP in the request
             std::string req_ip{ip, INET_ADDRSTRLEN};
@@ -172,14 +173,13 @@ void Server::worker(std::vector<int> &conns, Server *server)
 
             // ---- Route Matching ----
             auto it = server->pathMap.find({request.data.path, request.data.method});
-            bool routeExists = false;
             bool dynamicParams = false;
             size_t colonForDP = request.data.path.find_first_of(":");
             if (colonForDP != std::string::npos)
                 dynamicParams = true;
 
             // fill in the params becfore the function execution
-
+            bool routeExists = false;
             for (auto &it : server->pathMap)
             {
                 bool dynamicRoute = false;
@@ -241,31 +241,39 @@ void Server::worker(std::vector<int> &conns, Server *server)
 
                     // ---- Function Calling
                     it.second(request, response);
+                    routeExists = true;
+                    break;
                 }
                 else
                 {
                     // just check if the route matches
-                    if (request.data.path == route && request.data.method == it.first.second)
+                    if (request.data.path == route && request.data.method == it.first.second){
                         it.second(request, response);
+                        routeExists = true;
+                        break;
+                    }
                     else
                         continue;
                 }
+            }
+
+            // if route does not exists, just exit the loop 
+            if (!routeExists){
+                response.sendHTML("<h1>404 Not Found!</h1>", 404);
+                logger.request(request.data.method, request.data.path, response.status);
             }
 
             logger.request(request.data.method, request.data.path, response.status);
 
             // if connection set to close, just close it else just keep reading
             if (request.data.headers["Connection"] == "close")
-                rolling_timestamp = start_timestamp + server->CONNECTION_TIMEOUT + 1;
-
+                break;
         }
-        
-        // so when you are out of the loop, it simply means this connection needs to be closed 
+
+        // so when you are out of the loop, it simply means this connection needs to be closed
         close(connfd);
         logger.debug("Closing the Connection for IP: " + std::string(ip));
-    
     }
-
 }
 
 void Server::start()
@@ -301,7 +309,7 @@ void Server::start()
 
     logger.info("Server listening on port " + std::to_string(PORT));
 
-    listen(server_socket, 5);
+    listen(server_socket, SOMAXCONN);
 
     sockaddr_in peer_addr{};
     socklen_t peer_addr_len = sizeof(peer_addr);
@@ -334,12 +342,12 @@ void Server::start()
         std::lock_guard<std::mutex> lock(mtx);
         conns.push_back(connfd);
         cv.notify_one();
-    } 
+    }
 }
 
 void Server::registerRoute(std::string route, std::string method, std::function<void(Request &, Response &)> callback)
 {
-    // check if the route is dynamic or not  
+    // check if the route is dynamic or not
     this->pathMap[{route, method}] = callback;
 }
 
