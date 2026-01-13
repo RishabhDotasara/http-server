@@ -68,168 +68,204 @@ void Server::worker(std::vector<int> &conns, Server *server)
         getpeername(connfd, (sockaddr *)&peeraddr, &peeraddr_len);
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(peeraddr.sin_addr), ip, INET_ADDRSTRLEN);
+        struct timeval timeout;
+        timeout.tv_sec = server->CONNECTION_TIMEOUT; // 5 seconds
+        timeout.tv_usec = 0;
+        setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
-        // request buffer
-        Request request{connfd};
-        Response response{connfd};
+        int requestCount{0}; 
+        time_t start_timestamp = std::time(nullptr); 
+        time_t rolling_timestamp = std::time(nullptr);
 
-        // -- Set IP in the request
-        std::string req_ip{ip, INET_ADDRSTRLEN};
-        request.data.ip = req_ip;
-
-        auto rateLimit_it = server->rateLimitBucket.find(req_ip);
-        std::time_t now = std::time(nullptr);
-    
-        if ((rateLimit_it != server->rateLimitBucket.end()))
+        // loop to keep connections as supported in HTTP/1.1
+        while (requestCount <= server->CONNECTION_MAX_REQUESTS)
         {
-            if (rateLimit_it->second.second <= 0 && now - rateLimit_it->second.first <server->REQUEST_LIMIT_WINDOW)
-            {
-                response.sendHTML("", 429);
-                continue;
+
+            // request buffer
+            Request request{connfd};
+            Response response{connfd};
+            requestCount++;
+
+            // so rolling timestamp checks the time of inactivity on the connection 
+            if (request.data.method.empty()) {
+                rolling_timestamp = std::time(nullptr);
+                // close(connfd); 
+                break;
             }
-            else if (rateLimit_it->second.second <= 0 && now - rateLimit_it->second.first >= server->REQUEST_LIMIT_WINDOW)
+            
+            
+
+
+            // -- Set IP in the request
+            std::string req_ip{ip, INET_ADDRSTRLEN};
+            request.data.ip = req_ip;
+
+            auto rateLimit_it = server->rateLimitBucket.find(req_ip);
+            std::time_t now = std::time(nullptr);
+
+            if (server->RateLimitEnabled)
             {
-                rateLimit_it->second.second = server->REQUEST_LIMIT;
-                logger.debug("Rate limit window reset for IP: " + req_ip);
-            }
-            else {
-                rateLimit_it->second.second -= 1;
-            }
-        }
-        else
-        {
-            server->rateLimitBucket[req_ip] = {now, server->REQUEST_LIMIT};
-        }
-
-        // ---- CHECK REQUEST BODY SIZE
-        if (!request.data.headers["Content-Length"].empty() && std::stoi(request.data.headers["Content-Length"]) > server->REQUEST_BODY_SIZE_LIMIT)
-        {
-            response.sendHTML("", 413);
-            continue;
-        }
-
-        // ---- CORS SETUP -----
-        // so if we get a OPTIONS request, send the response with some set headers.
-
-        // apply cors headers to all responses
-        for (auto &it : server->CORS)
-        {
-            response.setHTTPHeader(it.first, it.second);
-        }
-
-        if (request.data.method == "OPTIONS")
-        {
-            response.sendHTML("", 204);
-            close(connfd);
-            continue;
-        }
-
-        // ---- Middleware execution before the main handler
-        {
-            bool executeNext = true;
-
-            for (Middleware func : server->middlewares)
-            {
-                executeNext = false;
-
-                func(request, response, [&executeNext]()
-                     { executeNext = true; });
-
-                if (!executeNext)
-                    break;
-            }
-
-            // if the last middleware didnt call next, we just leave the request there
-            if (!executeNext)
-                continue;
-        }
-
-        // ---- Route Matching ----
-        auto it = server->pathMap.find({request.data.path, request.data.method});
-        bool routeExists = false;
-        bool dynamicParams = false;
-        size_t colonForDP = request.data.path.find_first_of(":");
-        if (colonForDP != std::string::npos)
-            dynamicParams = true;
-
-        // fill in the params becfore the function execution
-
-        for (auto &it : server->pathMap)
-        {
-            bool dynamicRoute = false;
-            std::string method = it.first.second;
-            std::string route = it.first.first;
-            size_t colon = route.find_first_of(":");
-
-            // dynamic route check
-            if (colon != std::string::npos)
-                dynamicRoute = true;
-
-            // /usr/:id/role/:role
-            // /usr/2/role/admin
-            if (dynamicRoute)
-            {
-
-                // ---Check the path and the method
-                if (request.data.path.substr(0, colon - 1) != route.substr(0, colon - 1))
-                    continue;
-                if (request.data.method != it.first.second)
-                    continue;
-
-                // --- PARAM Extraction
-
-                int i = colon; // path
-                int j = colon; // route
-                while (i < request.data.path.length() && j < route.length())
+                if ((rateLimit_it != server->rateLimitBucket.end()))
                 {
-                    size_t nextSlashInPath = request.data.path.find_first_of("/", i);
-                    size_t nextSlashInRoute = route.find_first_of("/", j);
-
-                    if (nextSlashInRoute == std::string::npos)
+                    if (rateLimit_it->second.second <= 0 && now - rateLimit_it->second.first < server->REQUEST_LIMIT_WINDOW)
                     {
-                        // nextSlashInPath = request.data.path.length();
-                        nextSlashInRoute = route.length();
-                    }
-
-                    // check if this one is a param or simple route
-                    if (route[j] != ':' && request.data.path.substr(i, nextSlashInPath - i) == route.substr(j, nextSlashInRoute - j))
-                    {
-                        i = nextSlashInPath + 1;
-                        j = nextSlashInRoute + 1;
+                        response.sendHTML("", 429);
                         continue;
                     }
+                    else if (rateLimit_it->second.second <= 0 && now - rateLimit_it->second.first >= server->REQUEST_LIMIT_WINDOW)
+                    {
+                        rateLimit_it->second.second = server->REQUEST_LIMIT;
+                        logger.debug("Rate limit window reset for IP: " + req_ip);
+                    }
+                    else
+                    {
+                        rateLimit_it->second.second -= 1;
+                    }
+                }
+                else
+                {
+                    server->rateLimitBucket[req_ip] = {now, server->REQUEST_LIMIT};
+                }
+            }
 
-                    // if (nextSlashInPath == std::string::npos){
-                    //     nextSlashInPath = request.data.path.length();
-                    // }
+            // ---- CHECK REQUEST BODY SIZE
+            if (!request.data.headers["Content-Length"].empty() && std::stoi(request.data.headers["Content-Length"]) > server->REQUEST_BODY_SIZE_LIMIT)
+            {
+                response.sendHTML("", 413);
+                continue;
+            }
 
-                    std::string value = request.data.path.substr(i, nextSlashInPath - i);
-                    std::string key = route.substr(j + 1, nextSlashInRoute - j - 1);
-                    request.data.params[key] = value;
+            // ---- CORS SETUP -----
+            // so if we get a OPTIONS request, send the response with some set headers.
 
-                    // std::cout << "[DEBUG] Extracted param: " << key << " = " << value << "\n";
+            // apply cors headers to all responses
+            for (auto &it : server->CORS)
+            {
+                response.setHTTPHeader(it.first, it.second);
+            }
 
-                    i = nextSlashInPath + 1;
-                    j = nextSlashInRoute + 1;
+            if (request.data.method == "OPTIONS")
+            {
+                response.sendHTML("", 204);
+                continue;
+            }
+
+            // ---- Middleware execution before the main handler
+            {
+                bool executeNext = true;
+
+                for (Middleware func : server->middlewares)
+                {
+                    executeNext = false;
+
+                    func(request, response, [&executeNext]()
+                         { executeNext = true; });
+
+                    if (!executeNext)
+                        break;
                 }
 
-                // ---- Function Calling
-                it.second(request, response);
-            }
-            else
-            {
-                // just check if the route matches
-                if (request.data.path == route && request.data.method == it.first.second)
-                    it.second(request, response);
-                else
+                // if the last middleware didnt call next, we just leave the request there
+                if (!executeNext)
                     continue;
             }
+
+            // ---- Route Matching ----
+            auto it = server->pathMap.find({request.data.path, request.data.method});
+            bool routeExists = false;
+            bool dynamicParams = false;
+            size_t colonForDP = request.data.path.find_first_of(":");
+            if (colonForDP != std::string::npos)
+                dynamicParams = true;
+
+            // fill in the params becfore the function execution
+
+            for (auto &it : server->pathMap)
+            {
+                bool dynamicRoute = false;
+                std::string method = it.first.second;
+                std::string route = it.first.first;
+                size_t colon = route.find_first_of(":");
+
+                // dynamic route check
+                if (colon != std::string::npos)
+                    dynamicRoute = true;
+
+                // /usr/:id/role/:role
+                // /usr/2/role/admin
+                if (dynamicRoute)
+                {
+
+                    // ---Check the path and the method
+                    if (request.data.path.substr(0, colon - 1) != route.substr(0, colon - 1))
+                        continue;
+                    if (request.data.method != it.first.second)
+                        continue;
+
+                    // --- PARAM Extraction
+
+                    int i = colon; // path
+                    int j = colon; // route
+                    while (i < request.data.path.length() && j < route.length())
+                    {
+                        size_t nextSlashInPath = request.data.path.find_first_of("/", i);
+                        size_t nextSlashInRoute = route.find_first_of("/", j);
+
+                        if (nextSlashInRoute == std::string::npos)
+                        {
+                            // nextSlashInPath = request.data.path.length();
+                            nextSlashInRoute = route.length();
+                        }
+
+                        // check if this one is a param or simple route
+                        if (route[j] != ':' && request.data.path.substr(i, nextSlashInPath - i) == route.substr(j, nextSlashInRoute - j))
+                        {
+                            i = nextSlashInPath + 1;
+                            j = nextSlashInRoute + 1;
+                            continue;
+                        }
+
+                        // if (nextSlashInPath == std::string::npos){
+                        //     nextSlashInPath = request.data.path.length();
+                        // }
+
+                        std::string value = request.data.path.substr(i, nextSlashInPath - i);
+                        std::string key = route.substr(j + 1, nextSlashInRoute - j - 1);
+                        request.data.params[key] = value;
+
+                        // std::cout << "[DEBUG] Extracted param: " << key << " = " << value << "\n";
+
+                        i = nextSlashInPath + 1;
+                        j = nextSlashInRoute + 1;
+                    }
+
+                    // ---- Function Calling
+                    it.second(request, response);
+                }
+                else
+                {
+                    // just check if the route matches
+                    if (request.data.path == route && request.data.method == it.first.second)
+                        it.second(request, response);
+                    else
+                        continue;
+                }
+            }
+
+            logger.request(request.data.method, request.data.path, response.status);
+
+            // if connection set to close, just close it else just keep reading
+            if (request.data.headers["Connection"] == "close")
+                rolling_timestamp = start_timestamp + server->CONNECTION_TIMEOUT + 1;
+
         }
-
-        logger.request(request.data.method, request.data.path, response.status);
-
+        
+        // so when you are out of the loop, it simply means this connection needs to be closed 
         close(connfd);
+        logger.debug("Closing the Connection for IP: " + std::string(ip));
+    
     }
+
 }
 
 void Server::start()
@@ -298,11 +334,12 @@ void Server::start()
         std::lock_guard<std::mutex> lock(mtx);
         conns.push_back(connfd);
         cv.notify_one();
-    }
+    } 
 }
 
 void Server::registerRoute(std::string route, std::string method, std::function<void(Request &, Response &)> callback)
 {
+    // check if the route is dynamic or not  
     this->pathMap[{route, method}] = callback;
 }
 

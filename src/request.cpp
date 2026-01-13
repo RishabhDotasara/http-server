@@ -36,6 +36,12 @@ void Request::parseRequest()
     char buffer[1024];
     ssize_t bytes = recv(connfd, buffer, sizeof(buffer), 0);
 
+    if (bytes <= 0){
+        // just check if we have no bytes, the connection is probably closed.
+        data.method = ""; 
+        return;
+    }
+
     if (bytes > 0)
     {
 

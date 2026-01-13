@@ -17,11 +17,12 @@ int main()
 
     logger.info("Initializing HTTP Server...");
 
-    Server server(4, 3000);
+    Server server(100, 3000);
 
     // --- Rate Limit Setting--- IP based rate limiting
-    server.REQUEST_LIMIT = 100; 
-    server.REQUEST_LIMIT_WINDOW = 60; //in seconds
+    server.RateLimitEnabled = true;
+    server.REQUEST_LIMIT = 100000; 
+    server.REQUEST_LIMIT_WINDOW = 1; //in seconds
 
     // ----- CORS Polciy Setup
     CorsConfig config;

@@ -1,0 +1,10 @@
+=== Load Test Results ===
+Date: Tue 13 Jan 2026 04:08:49 PM IST
+Server: http://localhost:3000
+Concurrent Users: 50
+Requests per User: 20
+Total Requests: 1000
+======================================
+
+Testing: Static: /index
+URL: http://localhost:3000/index

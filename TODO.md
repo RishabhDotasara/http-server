@@ -20,7 +20,7 @@
 
 ## Security
 - [ ] Security headers (X-Content-Type-Options, X-Frame-Options, CSP, HSTS)
-- [ ] Rate limiting (per-IP, per-route)
+- [x] Rate limiting (per-IP, per-route)
 - [ ] Input validation and sanitization
 
 ## Logging & Monitoring
